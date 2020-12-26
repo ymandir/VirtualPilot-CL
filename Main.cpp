@@ -15,12 +15,13 @@ int main()
 {
    
     fileManager fm;
- 
+    sf::Texture* camFront = fm.loadNextCamFront();
+
 
     sf::RenderWindow window(sf::VideoMode(1920, 1080), "VP_CL");
 
     nlohmann::json jsonFile;
-    std::string fileName = "samples/CAM_FRONT/n008 - 2018 - 08 - 01 - 15 - 16 - 36 - 0400__CAM_FRONT__1533151061512404.jpg";
+    std::string fileName = fm.getCamFrontName();
     if (fm.findObject(500, fm.files.at("sample_data"), jsonFile, "filename", fileName))
     {
         std::cout << jsonFile.dump() << std::endl;
@@ -37,6 +38,7 @@ int main()
         }
 
         window.clear();
+        window.draw(sf::Sprite(*camFront));
         window.display();
     }
 

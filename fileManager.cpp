@@ -21,7 +21,7 @@ void fileManager::loadNames(std::string path, std::vector<std::string>& nameStac
 {
     for (const auto& entry : std::filesystem::directory_iterator(path))
     {
-        nameStack.push_back(entry.path().string().substr(path.size() + 2, entry.path().string().size() - path.size() - 2));
+        nameStack.push_back(entry.path().string().substr(path.size() + 1, entry.path().string().size() - path.size() - 1));
     }
 }
 
@@ -113,4 +113,19 @@ bool fileManager::findObject(int size, std::ifstream* readFile, nlohmann::json& 
         if (portion * i > size) { exit = true; }
     }
     return false;
+}
+
+sf::Texture* fileManager::loadNextCamFront()
+{
+    sf::Texture* tex = new sf::Texture;
+    std::string path = DATA_PATH;
+    path.append("/samples/CAM_FRONT/");
+    tex->loadFromFile(path + camFrontNames.at(camFrontNamesNext));
+    camFrontNamesNext++;
+    return tex;
+}
+
+std::string fileManager::getCamFrontName()
+{
+    return camFrontNames.at(camFrontNamesNext - 1);
 }
