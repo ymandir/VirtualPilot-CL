@@ -70,7 +70,17 @@ bool findObject(int size, std::ifstream* readFile, nlohmann::json& jsonObj, std:
 {
     nlohmann::json jsonFile = readFromFile(size, readFile);
     std::string valueString = "\"" + value + "\"";
+    
+    // remove all the spaces
     std::remove(valueString.begin(),valueString.end(),' ');
+    valueString.pop_back();
+    while (valueString[valueString.size()-1] != '"')
+    {
+        valueString.pop_back();
+    }
+
+    std::remove(valueString.begin(),valueString.end(),' ');
+
     for (int i = 0; i < size; i++)
     {
         std::string keyString = jsonFile[i][key].dump();
@@ -87,16 +97,18 @@ int main()
 {
     initFiles();
 
-
-
+    
     sf::RenderWindow window(sf::VideoMode(1920, 1080), "SFML works!");
     sf::CircleShape shape(100.f);
     shape.setFillColor(sf::Color::Green);
 
     nlohmann::json jsonFile;
     std::string fileName = "samples/CAM_FRONT/n008 - 2018 - 08 - 01 - 15 - 16 - 36 - 0400__CAM_FRONT__1533151061512404.jpg";
-    findObject(300000, files.at("sample_data"), jsonFile, "filename", fileName);
-    std::cout << jsonFile.dump() << std::endl;
+    if (findObject(500000, files.at("sample_data"), jsonFile, "filename", fileName))
+    {
+        std::cout << jsonFile.dump() << std::endl;
+    }
+    
 
     while (window.isOpen())
     {
