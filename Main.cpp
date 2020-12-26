@@ -68,7 +68,9 @@ nlohmann::json readFromFile(int size, std::ifstream* readFile)
 // size = how many objects to look through, obj = found object
 bool findObject(int size, std::ifstream* readFile, nlohmann::json& jsonObj, std::string key, std::string value)
 {
-    nlohmann::json jsonFile = readFromFile(size, readFile);
+    int portion = 10000;
+    if (size < portion) { portion = size; }
+    nlohmann::json jsonFile = readFromFile(portion, readFile);
     std::string valueString = "\"" + value + "\"";
     
     // remove all the spaces
@@ -81,14 +83,22 @@ bool findObject(int size, std::ifstream* readFile, nlohmann::json& jsonObj, std:
 
     std::remove(valueString.begin(),valueString.end(),' ');
 
-    for (int i = 0; i < size; i++)
+    bool exit = false;
+    int i = 0;
+    while (!exit)
     {
-        std::string keyString = jsonFile[i][key].dump();
-        if (!keyString.compare(valueString)) 
-        { 
-            jsonObj = jsonFile[i]; 
-            return true;
+        for (int i = 0; i < size; i++)
+        {
+            std::string keyString = jsonFile[i][key].dump();
+            if (!keyString.compare(valueString))
+            {
+                jsonObj = jsonFile[i];
+                return true;
+            }
         }
+        jsonFile = readFromFile(portion, readFile);
+        i++;
+        if (portion * i > size) { exit = true; }
     }
     return false;
 }
@@ -98,9 +108,7 @@ int main()
     initFiles();
 
     
-    sf::RenderWindow window(sf::VideoMode(1920, 1080), "SFML works!");
-    sf::CircleShape shape(100.f);
-    shape.setFillColor(sf::Color::Green);
+    sf::RenderWindow window(sf::VideoMode(1920, 1080), "VP_CL");
 
     nlohmann::json jsonFile;
     std::string fileName = "samples/CAM_FRONT/n008 - 2018 - 08 - 01 - 15 - 16 - 36 - 0400__CAM_FRONT__1533151061512404.jpg";
@@ -120,7 +128,6 @@ int main()
         }
 
         window.clear();
-        window.draw(shape);
         window.display();
     }
 
