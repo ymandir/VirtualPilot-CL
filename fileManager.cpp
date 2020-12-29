@@ -7,7 +7,9 @@ fileManager::fileManager()
     camFrontPath.append("/samples/CAM_FRONT");
     loadNames(camFrontPath,camFrontNames);
 
-    categories = readFromFile(100,files.at("sample_data"));
+    categories = readFromFile(0,files.at("category"));
+    sampleData = readFromFile(0, files.at("sample_data"));
+    objectAnn = readFromFile(0, files.at("object_ann"));
 }
 
 // ADD A NEW FILE WITH THE FILE PATH
@@ -21,17 +23,19 @@ void fileManager::loadNames(std::string path, std::vector<std::string>& nameStac
 {
     for (const auto& entry : std::filesystem::directory_iterator(path))
     {
-        nameStack.push_back(entry.path().string().substr(path.size() + 1, entry.path().string().size() - path.size() - 1));
+        std::string name = entry.path().string().substr(path.size() + 1, entry.path().string().size() - path.size() - 1);
+        nameStack.push_back(name);
     }
 }
 
 void fileManager::initFiles()
 {
-    std::string dataPath = "B:/nuScenesDataset";
-    addFile("sample_data", dataPath + "/1.0-trainval-meta/v1.0-trainval/sample_data.json");
-    addFile("category", dataPath + "/1.0-trainval-meta/v1.0-trainval/category.json");
-    addFile("sample", dataPath + "/1.0-trainval-meta/v1.0-trainval/sample.json");
-    addFile("sample_annotation", dataPath + "/1.0-trainval-meta/v1.0-trainval/sample_annotation.json");
+    std::string dataPath = "B:/nuImagesDataset";
+    addFile("sample_data", dataPath + "/v1.0-train/sample_data.json");
+    addFile("category", dataPath + "/v1.0-train/category.json");
+    addFile("sample", dataPath + "/v1.0-train/sample.json");
+    addFile("object_ann", dataPath + "/v1.0-train/object_ann.json");
+    addFile("sample_annotation", dataPath + "/v1.0-train/sample_annotation.json");
 }
 
 
@@ -50,13 +54,19 @@ nlohmann::json fileManager::readFromFile(int size, std::ifstream* readFile)
     if (line[0] != '[') { line = "[{"; }
     result << line;
     objectIndex++;
-
+    int openBracket = 0;
+    
     while (std::getline(*readFile, line) && !stop)
     {
-
+        if (line[0] == '{')
+        {
+            openBracket++;
+        }
+        
         if (line[0] == '}')
         {
-            objectIndex++;
+            openBracket--;
+            if (openBracket == 0) { objectIndex++; }
             if (stopOnObjectEnd)
             {
                 line.pop_back();
@@ -64,8 +74,8 @@ nlohmann::json fileManager::readFromFile(int size, std::ifstream* readFile)
                 stop = true;
             }
         }
-        else if (line[0] == ']') { stop = true; }
-
+        else if (!line.compare("]")) { stop = true; }
+        
         result << line;
 
         if (objectIndex == size) { stopOnObjectEnd = true; }
@@ -78,28 +88,36 @@ nlohmann::json fileManager::readFromFile(int size, std::ifstream* readFile)
 
 
 // size = how many objects to look through, obj = found object
-bool fileManager::findObject(int size, std::ifstream* readFile, nlohmann::json& jsonObj, std::string key, std::string value)
+bool fileManager::findObjectInFile(int size, std::ifstream* readFile, nlohmann::json& jsonObj, std::string key, std::string value)
 {
+    if (size == 0) { size = 2147483647; }
     int portion = 10000;
     if (size < portion) { portion = size; }
     nlohmann::json jsonFile = readFromFile(portion, readFile);
     std::string valueString = "\"" + value + "\"";
 
-    // remove all the spaces
-    std::remove(valueString.begin(), valueString.end(), ' ');
-    valueString.pop_back();
-    while (valueString[valueString.size() - 1] != '"')
-    {
-        valueString.pop_back();
-    }
 
-    std::remove(valueString.begin(), valueString.end(), ' ');
+    // only do white space removal if there are any whitespaces to remove
+    if (valueString.find(" ") != std::string::npos)
+    {
+        // remove all the spaces
+        std::remove(valueString.begin(), valueString.end(), ' ');
+        valueString.pop_back();
+
+        while (valueString[valueString.size() - 1] != '"')
+        {
+            valueString.pop_back();
+        }
+
+        std::remove(valueString.begin(), valueString.end(), ' ');
+    }
+    
 
     bool exit = false;
     int i = 0;
     while (!exit)
     {
-        for (int i = 0; i < size; i++)
+        for (int i = 0; i < portion; i++)
         {
             std::string keyString = jsonFile[i][key].dump();
             if (!keyString.compare(valueString))
@@ -113,6 +131,82 @@ bool fileManager::findObject(int size, std::ifstream* readFile, nlohmann::json& 
         if (portion * i > size) { exit = true; }
     }
     return false;
+}
+
+bool fileManager::findObject(nlohmann::json& readObj, nlohmann::json& jsonObj, std::string key, std::string value)
+{
+    std::string valueString = "\"" + value + "\"";
+
+
+    // only do white space removal if there are any whitespaces to remove
+    if (valueString.find(" ") != std::string::npos)
+    {
+        // remove all the spaces
+        std::remove(valueString.begin(), valueString.end(), ' ');
+        valueString.pop_back();
+
+        while (valueString[valueString.size() - 1] != '"')
+        {
+            valueString.pop_back();
+        }
+
+        std::remove(valueString.begin(), valueString.end(), ' ');
+    }
+
+
+    for (int i = 0; i < readObj.size(); i++)
+    {
+        std::string keyString = readObj[i][key].dump();
+        if (!keyString.compare(valueString))
+        {
+            jsonObj = readObj[i];
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool fileManager::findAllObjects(nlohmann::json& readObj, std::vector<nlohmann::json>& objects, std::string key, std::string value)
+{
+    std::string valueString = "\"" + value + "\"";
+
+
+    // only do white space removal if there are any whitespaces to remove
+    if (valueString.find(" ") != std::string::npos)
+    {
+        // remove all the spaces
+        std::remove(valueString.begin(), valueString.end(), ' ');
+        valueString.pop_back();
+
+        while (valueString[valueString.size() - 1] != '"')
+        {
+            valueString.pop_back();
+        }
+
+        std::remove(valueString.begin(), valueString.end(), ' ');
+    }
+
+
+    for (int i = 0; i < readObj.size(); i++)
+    {
+        std::string keyString = readObj[i][key].dump();
+        if (!keyString.compare(valueString))
+        {
+            objects.push_back(readObj[i]);
+        }
+    }
+
+    if (objects.size() > 0) { return true; }
+    return false;
+}
+
+std::string fileManager::getCategoryName(std::string token)
+{
+    nlohmann::json jsonObj;
+    findObject(categories, jsonObj, "token", token);
+    std::string name = jsonObj["name"].dump();
+    return name.substr(1,name.size()-2);
 }
 
 sf::Texture* fileManager::loadNextCamFront()
