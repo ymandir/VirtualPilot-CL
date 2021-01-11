@@ -12,11 +12,6 @@ class fileManager
 {
 public:
 	
-	struct annotation
-	{
-		
-
-	};
 
 	struct frameData
 	{

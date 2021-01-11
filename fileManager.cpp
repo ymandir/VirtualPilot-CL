@@ -91,7 +91,7 @@ nlohmann::json fileManager::readFromFile(int size, std::ifstream* readFile)
 bool fileManager::findObjectInFile(int size, std::ifstream* readFile, nlohmann::json& jsonObj, std::string key, std::string value)
 {
     if (size == 0) { size = 2147483647; }
-    int portion = 10000;
+    int portion = 100000;
     if (size < portion) { portion = size; }
     nlohmann::json jsonFile = readFromFile(portion, readFile);
     std::string valueString = "\"" + value + "\"";
