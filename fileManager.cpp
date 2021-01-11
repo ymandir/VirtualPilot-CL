@@ -21,7 +21,7 @@ void fileManager::addFile(std::string fileName, std::string filePath)
 // Loads file names into a vector in a given directory
 void fileManager::loadNames(std::string path, std::vector<std::string>& nameStack)
 {
-    for (const auto& entry : std::filesystem::directory_iterator(path))
+    for (const auto& entry : std::experimental::filesystem::directory_iterator(path))
     {
         std::string name = entry.path().string().substr(path.size() + 1, entry.path().string().size() - path.size() - 1);
         nameStack.push_back(name);
